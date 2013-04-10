@@ -7,10 +7,9 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.inventory.ItemStack;
 
-import com.alphahelical.bukkit.MaterialInfo;
-import com.alphahelical.bukkit.anvil.VirtualAnvil;
+import com.alphahelical.bukkit.PlayerInteractActions;
+import static com.alphahelical.bukkit.PlayerInteractActions.*;
 
 /**
  * @author kbeckman
@@ -38,17 +37,17 @@ public class ArcaneForgeListener implements Listener {
 		if (e.isCancelled())
 			return;
 		
-		if (! e.hasBlock() || ! e.hasItem() || e.getPlayer().isSneaking() || ! Util.isArcaneForge(e.getClickedBlock()))
+		if (! e.hasBlock() || ! e.hasItem() || ! Util.isArcaneForge(e.getClickedBlock()))
 			return;
 		
-		ArcaneForgeActions a = null;
+		PlayerInteractActions a = null;
 		
 		switch(e.getAction()) {
 			case LEFT_CLICK_BLOCK:
-				a = ArcaneForgeActions.COST;
+				a = e.getPlayer().isSneaking() ? SNEAK_HIT : HIT;
 				break;
 			case RIGHT_CLICK_BLOCK:
-				a = ArcaneForgeActions.REPAIR;
+				a = e.getPlayer().isSneaking() ? SNEAK_USE : USE;
 				break;
 			default:
 				return;
@@ -68,51 +67,46 @@ public class ArcaneForgeListener implements Listener {
 			return;
 		
 		Player p = e.getPlayer();
-		ItemStack item = p.getItemInHand();
-		MaterialInfo mi = new MaterialInfo(item);
+
+		ArcaneRepairer rep = new ArcaneRepairer(p.getItemInHand());
 		
-		if (! mi.hasBaseMaterial()) {
+		if (! rep.canRepair()) {
 			e.getPlayer().sendMessage("You cannot repair that.");
 			e.setCancelled(true);
 			return;
 		}
 		
-		ItemStack scrap = new ItemStack(mi.getBaseMaterial(), 1); // TODO: do greater repair level per try?
-		
-		VirtualAnvil anvil = new VirtualAnvil(e.getPlayer(), item, scrap, null);
-
-		if(anvil.getResult() == null) {
+		if(rep.getResult() == null) {
 			p.sendMessage("This item cannot be repaired.");
 			return;
 		}
 		
-		if(anvil.getLevelCost() < Config.getMinLevel()) {
+		if(rep.getLevelCost() < Config.getMinLevel()) {
 			p.sendMessage("This item is not arcane enough to repair here.");
 			return;
 		}
 		
-		if(anvil.getLevelCost() > Config.getMaxLevel()) {
+		if(rep.getLevelCost() > Config.getMaxLevel()) {
 			p.sendMessage("This item is too arcane even for this forge.");
 			return;
 		}			
 		
-		this.getPlugin().getLogger().info(String.format("VirtualAnvil:\nold: %s\nnew: %s\nlvl: %d\nscrap: %d\n\n",
-				item, anvil.getResult(), anvil.getLevelCost(), anvil.getScrapCost()));
-		
 		switch(e.getAction()) {
-			case COST:
-				p.sendMessage(Util.costMessage(anvil));
+			case HIT:
+			case SNEAK_HIT:
+				p.sendMessage(rep.getCostMessage());
 				break;
-			case REPAIR:
-				if(Util.canPlayerAfford(p, anvil.getLevelCost()) &&
-						Util.canPlayerAfford(p, mi.getBaseMaterial(), anvil.getScrapCost())) {
+			case USE:
+			case SNEAK_USE:
+				if(Util.canPlayerAfford(p, rep.getLevelCost()) &&
+						Util.canPlayerAfford(p, rep.getBaseMaterial(), rep.getScrapCost())) {
 					
 					// Schedule RepairItemTask, because setting held item during RIGHT_CLICK_BLOCK fails.
 					// This appears to be a bug in CraftBukkit, with no known solution.
-					Runnable task = new RepairItemTask(p, item, anvil, e.getBlock());
+					Runnable task = new RepairItemTask(p, rep, e.getBlock());
 					this.getPlugin().getServer().getScheduler().runTask(this.getPlugin(), task);
 				} else {
-					String msg = String.format("You cannot pay for that repair:\n    %s", Util.costMessage(anvil));
+					String msg = String.format("You cannot pay for that repair:\n    %s", rep.getCostMessage());
 					p.sendMessage(msg);
 				}
 				break;

@@ -48,5 +48,5 @@ public class ArcaneForgePlugin extends SGPlugin {
 		// TODO Auto-generated method stub
 
 	}
-
+	
 }

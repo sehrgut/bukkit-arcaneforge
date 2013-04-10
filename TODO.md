@@ -7,7 +7,7 @@
 - Hunt for optimal amount of scrap to use
 - Restrict AF to only enchanted items
 - Restrict AF to only certain base materials
-- Make sure (test!) Repair Cost is being respected
+- DONE: Make sure (test!) Repair Cost is being respected
 - repair and cost commands (will req. breakout of repair logic from event handler)
 - permissions to repair
   - maybe permissions for minimum and maximum levels, material types, etc.?

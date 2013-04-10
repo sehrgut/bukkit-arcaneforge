@@ -3,12 +3,12 @@
  */
 package com.alphahelical.bukkit.arcaneforge;
 
+import org.apache.commons.lang.NullArgumentException;
+import org.bukkit.Location;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.ItemStack;
 
 import com.alphahelical.bukkit.MaterialInfo;
-import com.alphahelical.bukkit.anvil.VirtualAnvil;
 
 /**
  * @author Keith Beckman
@@ -17,14 +17,15 @@ import com.alphahelical.bukkit.anvil.VirtualAnvil;
 public class RepairItemTask implements Runnable {
 	
 	private Player player;
-	private ItemStack oldItem;
-	private VirtualAnvil anvil;
+	private ArcaneRepairer repair;
 	private Block block;
 	
-	public RepairItemTask(Player player, ItemStack oldItem, VirtualAnvil anvil, Block block) {
+	public RepairItemTask(Player player, ArcaneRepairer repair, Block block) {
+		if(player == null) throw new NullArgumentException("player");
+		if(repair == null) throw new NullArgumentException("repair");
+		
 		this.player = player;
-		this.oldItem = oldItem;
-		this.anvil = anvil;
+		this.repair = repair;
 		this.block = block;
 	}
 	
@@ -35,20 +36,28 @@ public class RepairItemTask implements Runnable {
 	public void run() {
 
 		
-		if (this.oldItem.equals(this.player.getInventory().getItemInHand())) {
-			MaterialInfo mi = new MaterialInfo(this.oldItem);
+		if (this.repair.getInput().equals(this.player.getInventory().getItemInHand())) {
+			MaterialInfo mi = new MaterialInfo(this.repair.getInput());
 			
-			if(Util.canPlayerAfford(this.player, anvil.getLevelCost()) &&
-					Util.canPlayerAfford(this.player, mi.getBaseMaterial(), anvil.getScrapCost())) {
+			if(Util.canPlayerAfford(this.player, this.repair.getLevelCost()) &&
+					Util.canPlayerAfford(this.player, mi.getBaseMaterial(), this.repair.getScrapCost())) {
 
 				// TODO: a way to ensure atomicity and rollback?
-				Util.debitPlayer(this.player, anvil.getLevelCost()); // TODO test the two debit operations
-				Util.debitPlayer(this.player, mi.getBaseMaterial(), anvil.getScrapCost());				
-				this.player.setItemInHand(anvil.getResult());
+				Util.debitPlayer(this.player, this.repair.getLevelCost()); // TODO test the two debit operations
+				Util.debitPlayer(this.player, mi.getBaseMaterial(), this.repair.getScrapCost());				
+				this.player.setItemInHand(this.repair.getResult());
 
-				this.block.getLocation().getWorld().strikeLightningEffect(this.block.getLocation());
+//				  TODO: configure lightning?
+				Location strikeLoc = null;
+				if (this.block == null) {
+					strikeLoc = this.player.getLocation();
+				} else {
+					strikeLoc = this.block.getLocation();
+				}
+				strikeLoc.getWorld().strikeLightningEffect(this.block.getLocation());
+				
 			} else {
-				String msg = String.format("You cannot pay for that repair:\n    %s", Util.costMessage(anvil));
+				String msg = String.format("You cannot pay for that repair:\n    %s", this.repair.getCostMessage());
 				this.player.sendMessage(msg);
 			}
 			

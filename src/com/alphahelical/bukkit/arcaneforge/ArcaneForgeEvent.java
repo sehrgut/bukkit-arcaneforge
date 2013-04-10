@@ -9,6 +9,8 @@ import org.bukkit.event.Cancellable;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 
+import com.alphahelical.bukkit.PlayerInteractActions;
+
 /**
  * @author kbeckman
  *
@@ -35,13 +37,13 @@ public class ArcaneForgeEvent extends Event implements Cancellable {
 		this.player = player;
 	}
 
-	private ArcaneForgeActions action;
+	private PlayerInteractActions action;
 
-	public ArcaneForgeActions getAction() {
+	public PlayerInteractActions getAction() {
 		return action;
 	}
 
-	private void setAction(ArcaneForgeActions action) {
+	private void setAction(PlayerInteractActions action) {
 		this.action = action;
 	}
 
@@ -75,10 +77,10 @@ public class ArcaneForgeEvent extends Event implements Cancellable {
 		return handlers;
 	}
 
-	public ArcaneForgeEvent(Player player, Block block, ArcaneForgeActions action) {
+	public ArcaneForgeEvent(Player player, Block block, PlayerInteractActions a) {
 		this.setBlock(block);
 		this.setPlayer(player);
-		this.setAction(action);
+		this.setAction(a);
 	}
 	
 }
