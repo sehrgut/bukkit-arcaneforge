@@ -3,15 +3,10 @@
  */
 package com.alphahelical.bukkit.arcaneforge;
 
-import org.bukkit.Bukkit;
-import org.bukkit.Material;
-import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.block.BlockDamageEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.event.block.Action;
 import org.bukkit.inventory.ItemStack;
 
 import com.alphahelical.bukkit.MaterialInfo;
@@ -86,27 +81,39 @@ public class ArcaneForgeListener implements Listener {
 		
 		VirtualAnvil anvil = new VirtualAnvil(e.getPlayer(), item, scrap, null);
 
-		String msgCost = String.format("Cost to repair from %d to %d: %d lvl, %d %s",
-				anvil.getOldRemainingDurability(), anvil.getNewRemainingDurability(),
-				anvil.getLevelCost(), anvil.getScrapCost(),
-				mi.getBaseMaterial().toString().toLowerCase()
-				);
-
+		if(anvil.getResult() == null) {
+			p.sendMessage("This item cannot be repaired.");
+			return;
+		}
+		
+		if(anvil.getLevelCost() < Config.getMinLevel()) {
+			p.sendMessage("This item is not arcane enough to repair here.");
+			return;
+		}
+		
+		if(anvil.getLevelCost() > Config.getMaxLevel()) {
+			p.sendMessage("This item is too arcane even for this forge.");
+			return;
+		}			
+		
+		this.getPlugin().getLogger().info(String.format("VirtualAnvil:\nold: %s\nnew: %s\nlvl: %d\nscrap: %d\n\n",
+				item, anvil.getResult(), anvil.getLevelCost(), anvil.getScrapCost()));
+		
 		switch(e.getAction()) {
 			case COST:
-				p.sendMessage(msgCost);
+				p.sendMessage(Util.costMessage(anvil));
 				break;
 			case REPAIR:
 				if(Util.canPlayerAfford(p, anvil.getLevelCost()) &&
 						Util.canPlayerAfford(p, mi.getBaseMaterial(), anvil.getScrapCost())) {
-					p.setItemInHand(anvil.getResult());
-					Util.debitPlayer(p, anvil.getLevelCost());
-					Util.debitPlayer(p, mi.getBaseMaterial(), anvil.getScrapCost());
-					e.getBlock().getLocation().getWorld().strikeLightningEffect(e.getBlock().getLocation());
+					
+					// Schedule RepairItemTask, because setting held item during RIGHT_CLICK_BLOCK fails.
+					// This appears to be a bug in CraftBukkit, with no known solution.
+					Runnable task = new RepairItemTask(p, item, anvil, e.getBlock());
+					this.getPlugin().getServer().getScheduler().runTask(this.getPlugin(), task);
 				} else {
-					String msg = String.format("You cannot pay for that repair:\n%s", msgCost);
+					String msg = String.format("You cannot pay for that repair:\n    %s", Util.costMessage(anvil));
 					p.sendMessage(msg);
-					e.setCancelled(true);
 				}
 				break;
 		}

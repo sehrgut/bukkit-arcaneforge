@@ -27,6 +27,8 @@ public class ArcaneForgePlugin extends SGPlugin {
 	protected void onEnabled() {
 		// TODO Auto-generated method stub
 
+		this.registerListeners(new ArcaneForgeListener(this));
+		
 	}
 
 	/* (non-Javadoc)

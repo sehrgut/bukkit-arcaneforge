@@ -1,5 +1,5 @@
 name: Arcane Forge
-main: com.alphahelical.bukkit.arcaneforge
+main: com.alphahelical.bukkit.arcaneforge.ArcaneForgePlugin
 version: 0.1a
 softdepend: [Vault]
 depend: [SGCore]
